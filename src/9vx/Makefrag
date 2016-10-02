@@ -1,6 +1,6 @@
 ifeq ($(OS),linux)
 PLAN9VX=1
-PLAN9GUI=x11
+PLAN9GUI=fbdev
 PLAN9AUDIO=unix
 PLAN9PCAP=nopcap
 PLAN9TAP=ethertap
@@ -230,6 +230,14 @@ PLAN9_x11_OBJS = \
 	)
 PLAN9_x11_LIBS = -L/usr/X11R6/lib -L/usr/local/lib -lX11
 
+PLAN9_fbdev_OBJS = \
+	$(addprefix 9vx/fbdev/, \
+		fbdev-draw.o \
+		fbdev-init.o \
+		fbdev-kernel.o \
+	)
+PLAN9_fbdev_LIBS = -lgpm
+
 PLAN9_osx_OBJS =\
 	$(addprefix 9vx/osx/, \
 		screen.o \
@@ -263,6 +271,9 @@ PLAN9_DEPS = \
 	$(HOST_CC) $(HOST_CFLAGS) -I. -I9vx -I9vx/a -Wall -Wno-missing-braces -c -o $@ $<
 
 9vx/x11/%.o: 9vx/x11/%.c
+	$(HOST_CC) $(HOST_CFLAGS) -I. -I9vx -I9vx/a -I/usr/X11R6/include -I/usr/local/include -Wall -Wno-missing-braces -c -o $@ $<
+
+9vx/fbdev/%.o: 9vx/fbdev/%.c
 	$(HOST_CC) $(HOST_CFLAGS) -I. -I9vx -I9vx/a -I/usr/X11R6/include -I/usr/local/include -Wall -Wno-missing-braces -c -o $@ $<
 
 9vx/osx/%.o: 9vx/osx/%.c
@@ -317,6 +328,8 @@ CLEAN_FILES += \
 	9vx/a/ip/*.o \
 	9vx/x11/*.d \
 	9vx/x11/*.o \
+	9vx/fbdev/*.d \
+	9vx/fbdev/*.o \
 	9vx/kerndate.h \
 	9vx/a/errstr.h \
 	9vx/9vx \
