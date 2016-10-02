@@ -23,14 +23,12 @@
 	Button2MotionMask|\
 	Button3MotionMask)
 
-#define Mask MouseMask|ExposureMask|StructureNotifyMask|KeyPressMask|EnterWindowMask|LeaveWindowMask
-
 Rectangle windowrect;
 Rectangle screenrect;
 int fullscreen;
 
 static void
-_xproc(void *v)
+_fbproc(void *v)
 {
 	for(;;){
 	}
@@ -47,13 +45,13 @@ attachscreen(Rectangle *r, ulong *chan, int *depth,
 {
 	Memimage *m;
 
-	if(0){
+	if(_fb.screenimage == nil){
 		_memimageinit();
-		if(_xattach("9vx", nil) == nil)
+		if(_fbattach("9vx", nil) == nil)
 			panic("cannot connect to framebuffer: %r");
-		kproc("*fbdev*", _xproc, nil);
+		kproc("*fbdev*", _fbproc, nil);
 	}
-	m = _xattach("9vx", "640x480");
+	m = _fb.screenimage;
 	*r = m->r;
 	*chan = m->chan;
 	*depth = m->depth;
@@ -90,12 +88,17 @@ setcolor(ulong i, ulong r, ulong g, ulong b)
 char*
 getsnarf(void)
 {
-	return "";
+	return _fb.snarfbuf? _fb.snarfbuf: "";
 }
 
 void
 putsnarf(char *data)
 {
+	if (data) {
+		if (_fb.snarfbuf)
+			free(_fb.snarfbuf);
+		_fb.snarfbuf = strdup(data);
+	}
 }
 
 void

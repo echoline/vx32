@@ -36,11 +36,6 @@ cloadmemimage(Memimage *i, Rectangle r, uchar *data, int ndata)
 
 static int xdraw(Memdrawparam*);
 
-/*
- * The X acceleration doesn't fit into the standard hwaccel
- * model because we have the extra steps of pulling the image
- * data off the server and putting it back when we're done.
- */
 void
 memimagedraw(Memimage *dst, Rectangle r, Memimage *src, Point sp,
 	Memimage *mask, Point mp, int op)

@@ -1,16 +1,17 @@
 /*
- * Structure pointed to by X field of Memimage
+ * Structure pointed to by FB field of Memimage
  */
-typedef struct Xmem Xmem;
-struct Xmem
+typedef struct FBmem FBmem;
+struct FBmem
 {
 	Rectangle	r;	/* size of image */
 };
 
-typedef struct Xprivate Xprivate;
-struct Xprivate {
+typedef struct FBprivate FBprivate;
+struct FBprivate {
 	uint32		chan;
 	int		fd;	/* of display */
+	uchar		fbp;
 	int		depth;				/* of screen */
 	uint32		map[256];
 	uint32		map7[128];
@@ -22,13 +23,14 @@ struct Xprivate {
 	int		tox11[256];
 	int		usetable;
 	uint		putsnarf;
+	char*		snarfbuf;
 	uint		assertsnarf;
 	int		destroyed;
 };
 
-extern Xprivate _x;
+extern FBprivate _fb;
 
-extern Memimage*	_xattach(char*, char*);
+extern Memimage*	_fbattach(char*, char*);
 
 #define MouseMask (\
 	ButtonPressMask|\

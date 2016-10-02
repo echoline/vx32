@@ -10,23 +10,51 @@
 #include <keyboard.h>
 #include <cursor.h>
 #include "screen.h"
+#include "fbdev-inc.h"
+
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
 
 static int parsewinsize(char *s, Rectangle *r, int *havemin);
 static void plan9cmap(void);
 
-Memimage*
-_xattach(char *label, Rectangle *r)
-{
-	/*
-	 * Connect to X server.
-	 */
+FBprivate _fb;
 
-	/* 
+Memimage*
+_fbattach(char *label, char *winsize)
+{
+	Rectangle r;
+	struct fb_fix_screeninfo finfo;
+	struct fb_var_screeninfo vinfo;
+	uint32 width, height;
+	long screensize;
+
+	/*
+	 * Connect to /dev/fb0
+	 */
+	if (_fb.fd = open("/dev/fb0", O_RDWR) < 0)
+		goto err;
+
+	if (ioctl(_fb.fd, FBIOGET_VSCREENINFO, &vinfo) < 0)
+		goto err;
+	vinfo.grayscale=0;
+	vinfo.bits_per_pixel=32;
+	if (ioctl(_fb.fd, FBIOPUT_VSCREENINFO, &vinfo) < 0)
+		goto err;
+
+	if (ioctl(_fb.fd, FBIOGET_FSCREENINFO, &finfo) < 0)
+		goto err;
+	screensize = vinfo.yres_virtual * finfo.line_length;
+	if (_fb.fbp = mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, _fb.fd, (off_t)0) < 0)
+		goto err;
+	/*
 	 * Figure out underlying screen format.
 	 */
+	r = Rect(0, 0, vinfo.xres_virtual, vinfo.yres_virtual);
 
 	/*
-	 * _x.depth is only the number of significant pixel bits,
+	 * _fb.depth is only the number of significant pixel bits,
 	 * not the total number of pixel bits.  We need to walk the
 	 * display list to find how many actual bits are used
 	 * per pixel.
@@ -65,8 +93,17 @@ _xattach(char *label, Rectangle *r)
 	/*
 	 * Allocate some useful graphics contexts for the future.
 	 */
+	
+	for(int x = 0; x < vinfo.xres; x++) for (int y = 0; y < vinfo.yres; y++) {
+		long location = (x+vinfo.xoffset) * (vinfo.bits_per_pixel/8) + (y+vinfo.yoffset) * finfo.line_length;
+		*((uint32*)(_fb.fbp + location)) = 0x00FFFF00;
+	}
 
-	return allocmemimage(*r, XRGB32);
+	return allocmemimage(r, XRGB32);
+
+err:
+	oserror();
+	return nil;
 }
 
 /*
@@ -101,16 +138,16 @@ plan9cmap(void)
 			cb=b*num/den;
 		}
 		idx = r*64 + v*16 + ((g*4 + b + v - r) & 15);
-/*		_x.map[idx].red = cr*0x0101;
-		_x.map[idx].green = cg*0x0101;
-		_x.map[idx].blue = cb*0x0101;
-		_x.map[idx].pixel = idx;
-		_x.map[idx].flags = DoRed|DoGreen|DoBlue;*/
+/*		_fb.map[idx].red = cr*0x0101;
+		_fb.map[idx].green = cg*0x0101;
+		_fb.map[idx].blue = cb*0x0101;
+		_fb.map[idx].pixel = idx;
+		_fb.map[idx].flags = DoRed|DoGreen|DoBlue;*/
 
 		v7 = v >> 1;
 		idx7 = r*32 + v7*16 + g*4 + b;
 		if((v & 1) == v7){
-//			_x.map7to8[idx7][0] = idx;
+//			_fb.map7to8[idx7][0] = idx;
 			if(den == 0) { 		/* divide check -- pick grey shades */
 				cr = ((255.0/7.0)*v7)+0.5;
 				cg = cr;
@@ -122,14 +159,14 @@ plan9cmap(void)
 				cg=g*num/den;
 				cb=b*num/den;
 			}
-/*			_x.map7[idx7].red = cr*0x0101;
-			_x.map7[idx7].green = cg*0x0101;
-			_x.map7[idx7].blue = cb*0x0101;
-			_x.map7[idx7].pixel = idx7;
-			_x.map7[idx7].flags = DoRed|DoGreen|DoBlue;*/
+/*			_fb.map7[idx7].red = cr*0x0101;
+			_fb.map7[idx7].green = cg*0x0101;
+			_fb.map7[idx7].blue = cb*0x0101;
+			_fb.map7[idx7].pixel = idx7;
+			_fb.map7[idx7].flags = DoRed|DoGreen|DoBlue;*/
 		}
 //		else
-//			_x.map7to8[idx7][1] = idx;
+//			_fb.map7to8[idx7][1] = idx;
 	}
 }
 
