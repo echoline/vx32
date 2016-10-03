@@ -21,6 +21,19 @@ static void plan9cmap(void);
 
 FBprivate _fb;
 
+void
+fbput(Memimage *m, Rectangle r) {
+	int x, y;
+
+	for (x = r.min.x; x < r.max.x; x++) for (y = r.min.y; y < r.max.y; y++){
+//		long fbloc = (x+_fb.vinfo.xoffset) + (y+_fb.vinfo.yoffset) * _fb.finfo.line_length;
+		long fbloc = (x+_fb.vinfo.xoffset) * (_fb.vinfo.bits_per_pixel/8) + (y+_fb.vinfo.yoffset) * _fb.finfo.line_length;
+		uint32 pixel = *((uint32*)(m->data->bdata + ((y*m->width) + x)*4));
+
+		*((uint32*)(_fb.fbp + fbloc)) = pixel;
+	}
+}
+
 Memimage*
 _fbattach(char *label, char *winsize)
 {
@@ -53,6 +66,7 @@ _fbattach(char *label, char *winsize)
 
 	_fb.screenimage = allocmemimage(r, XRGB32);
 	termreplacescreenimage(_fb.screenimage);
+	fbput(_fb.screenimage, r);
 	return _fb.screenimage;
 
 err:

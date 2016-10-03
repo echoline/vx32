@@ -12,18 +12,6 @@
 #include "screen.h"
 #include "fbdev-inc.h"
 
-void
-fbput(Memimage *m, Rectangle r) {
-	int x, y;
-
-	for (x = r.min.x; x < r.max.x; x++) for (y = r.min.y; y < r.min.y; y++){
-		long fbloc = (x+_fb.vinfo.xoffset) * (_fb.vinfo.bits_per_pixel/8) + (y+_fb.vinfo.yoffset) * _fb.finfo.line_length;
-		uint32 pixel = *((uint32*)(m->data->bdata + (y*m->width) + (x*4)));
-
-		*((uint32*)(_fb.fbp + fbloc)) = 0x000000FF; //pixel;
-	}
-}
-
 /*
  * Replacements for libmemdraw routines.
  * (They've been underscored.)
@@ -50,8 +38,6 @@ cloadmemimage(Memimage *i, Rectangle r, uchar *data, int ndata)
 	int n;
 
 	n = _cloadmemimage(i, r, data, ndata);
-	if(n > 0)
-		fbput(i, r);
 	return n;
 }
 
@@ -67,7 +53,6 @@ memimagedraw(Memimage *dst, Rectangle r, Memimage *src, Point sp,
 	/* now can run memimagedraw on the in-memory bits */
 	_memimagedraw(par);
 
-	fbput(par->dst, par->r);
 }
 
 void
@@ -75,7 +60,6 @@ memfillcolor(Memimage *m, uint32 val)
 {
 	_memfillcolor(m, val);
 
-	fbput(m, m->r);
 }
 
 static void
@@ -104,3 +88,4 @@ pixelbits(Memimage *m, Point p)
 {
 	return _pixelbits(m, p);
 }
+

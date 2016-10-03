@@ -30,9 +30,11 @@ int fullscreen;
 static void
 _fbproc(void *v)
 {
+	int c;
+
 	for(;;){
-		fbput(_fb.screenimage, _fb.screenimage->r);
-		usleep(100);
+		while((c = Gpm_Getc(stdin)) != EOF)
+			kbdputc(kbdq, c);
 	}
 }
 
@@ -41,16 +43,34 @@ screeninit(void)
 {
 }
 
+int fbgpmhandler(Gpm_Event *event, void *data)
+{
+//	printf("Event Type : %d at x=%d y=%d\n", event->type, event->x, event->y);
+	return 0;       
+}
+
 uchar*
 attachscreen(Rectangle *r, ulong *chan, int *depth,
 	int *width, int *softscreen, void **X)
 {
 	Memimage *m;
+	Gpm_Connect conn;
 
 	if(_fb.screenimage == nil){
 		_memimageinit();
 		if(_fbattach("9vx", nil) == nil)
 			panic("cannot connect to framebuffer: %r");
+
+		conn.eventMask = ~0;
+		conn.defaultMask = 0;
+		conn.minMod = 0;
+		conn.maxMod= ~0;
+
+		if (Gpm_Open(&conn, 0) == -1)
+			panic("cannot connect to gpm: %r");
+
+		gpm_handler = fbgpmhandler;
+
 		kproc("*fbdev*", _fbproc, nil);
 	}
 	m = _fb.screenimage;
