@@ -11,7 +11,7 @@ typedef struct FBprivate FBprivate;
 struct FBprivate {
 	uint32		chan;
 	int		fd;	/* of display */
-	uchar		fbp;
+	uchar*		fbp;
 	int		depth;				/* of screen */
 	uint32		map[256];
 	uint32		map7[128];

@@ -1,4 +1,9 @@
 #include "u.h"
+
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+
 #include "lib.h"
 #include "mem.h"
 #include "dat.h"
@@ -11,10 +16,6 @@
 #include <cursor.h>
 #include "screen.h"
 #include "fbdev-inc.h"
-
-#include <linux/fb.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 
 static int parsewinsize(char *s, Rectangle *r, int *havemin);
 static void plan9cmap(void);
@@ -33,7 +34,7 @@ _fbattach(char *label, char *winsize)
 	/*
 	 * Connect to /dev/fb0
 	 */
-	if (_fb.fd = open("/dev/fb0", O_RDWR) < 0)
+	if ((_fb.fd = open("/dev/fb0", O_RDWR)) < 0)
 		goto err;
 
 	if (ioctl(_fb.fd, FBIOGET_VSCREENINFO, &vinfo) < 0)
@@ -46,7 +47,7 @@ _fbattach(char *label, char *winsize)
 	if (ioctl(_fb.fd, FBIOGET_FSCREENINFO, &finfo) < 0)
 		goto err;
 	screensize = vinfo.yres_virtual * finfo.line_length;
-	if (_fb.fbp = mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, _fb.fd, (off_t)0) < 0)
+	if ((_fb.fbp = mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, _fb.fd, (off_t)0)) < 0)
 		goto err;
 	/*
 	 * Figure out underlying screen format.
@@ -94,16 +95,16 @@ _fbattach(char *label, char *winsize)
 	 * Allocate some useful graphics contexts for the future.
 	 */
 	
-	for(int x = 0; x < vinfo.xres; x++) for (int y = 0; y < vinfo.yres; y++) {
+	for(int x = 0; x < vinfo.xres_virtual; x++) for (int y = 0; y < vinfo.yres_virtual; y++) {
 		long location = (x+vinfo.xoffset) * (vinfo.bits_per_pixel/8) + (y+vinfo.yoffset) * finfo.line_length;
-		*((uint32*)(_fb.fbp + location)) = 0x00FFFF00;
+		*((uint32*)(_fb.fbp + location)) = 0x0000FF00;
 	}
 
-	return allocmemimage(r, XRGB32);
+	_fb.screenimage = allocmemimage(r, XRGB32);
+	return _fb.screenimage;
 
 err:
 	oserror();
-	return nil;
 }
 
 /*
