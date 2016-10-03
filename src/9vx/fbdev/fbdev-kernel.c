@@ -30,20 +30,8 @@ int fullscreen;
 static void
 _fbproc(void *v)
 {
-	Memimage *m = _fb.screenimage;
-	Rectangle r = m->r;
-	static Lock flushlock;
-	int x, y;
-
 	for(;;){
-		lock(&flushlock);
-		for (x = r.min.x; x < r.max.x; x++) for (y = r.min.y; y < r.min.y; y++){
-			long fbloc = (x+_fb.vinfo.xoffset) * (_fb.vinfo.bits_per_pixel/8) + (y+_fb.vinfo.yoffset) * _fb.finfo.line_length;
-			long miloc = (y*m->width) + x*4;
-
-			*((uint32*)(_fb.fbp + fbloc)) = 0x0000FF00; //*((uint32*)(m->data->bdata + miloc));
-		}
-		unlock(&flushlock);
+		fbput(_fb.screenimage, _fb.screenimage->r);
 		usleep(100);
 	}
 }

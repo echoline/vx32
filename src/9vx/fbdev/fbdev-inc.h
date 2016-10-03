@@ -54,3 +54,5 @@ enum
 {
 	PMundef = ~0
 };
+
+void fbput(Memimage *m, Rectangle r);
