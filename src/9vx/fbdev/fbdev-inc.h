@@ -1,3 +1,5 @@
+#include <linux/fb.h>
+
 /*
  * Structure pointed to by FB field of Memimage
  */
@@ -26,6 +28,8 @@ struct FBprivate {
 	char*		snarfbuf;
 	uint		assertsnarf;
 	int		destroyed;
+	struct fb_fix_screeninfo finfo;
+	struct fb_var_screeninfo vinfo;
 };
 
 extern FBprivate _fb;

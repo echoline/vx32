@@ -24,6 +24,9 @@ allocmemimage(Rectangle r, uint32 chan)
 void
 freememimage(Memimage *m)
 {
+	if (m == nil)
+		return;
+
 	_freememimage(m);
 }
 
@@ -33,8 +36,6 @@ cloadmemimage(Memimage *i, Rectangle r, uchar *data, int ndata)
 {
 	return _cloadmemimage(i, r, data, ndata);
 }
-
-static int xdraw(Memdrawparam*);
 
 void
 memimagedraw(Memimage *dst, Rectangle r, Memimage *src, Point sp,
@@ -47,40 +48,14 @@ memimagedraw(Memimage *dst, Rectangle r, Memimage *src, Point sp,
 
 	/* now can run memimagedraw on the in-memory bits */
 	_memimagedraw(par);
-
-	if(xdraw(par))
-		return;
 }
-
-static int
-xdraw(Memdrawparam *par)
-{
-	uint state;
-	Memimage *src, *dst, *mask;
-	Rectangle r;
-
-	if(par->dst->x == nil)
-		return 0;
-
-	dst   = par->dst;
-	mask  = par->mask;
-	r     = par->r;
-	src   = par->src;
-	state = par->state;
-
-	/*
-	 * Can't accelerate.
-	 */
-	return 0;
-}
-
 
 void
 memfillcolor(Memimage *m, uint32 val)
 {
 	_memfillcolor(m, val);
-	if(m->x == nil)
-		return;
+//	if(m->x == nil)
+//		return;
 }
 
 static void

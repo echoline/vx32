@@ -1,6 +1,5 @@
 #include "u.h"
 
-#include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
@@ -26,8 +25,6 @@ Memimage*
 _fbattach(char *label, char *winsize)
 {
 	Rectangle r;
-	struct fb_fix_screeninfo finfo;
-	struct fb_var_screeninfo vinfo;
 	uint32 width, height;
 	long screensize;
 
@@ -37,74 +34,28 @@ _fbattach(char *label, char *winsize)
 	if ((_fb.fd = open("/dev/fb0", O_RDWR)) < 0)
 		goto err;
 
-	if (ioctl(_fb.fd, FBIOGET_VSCREENINFO, &vinfo) < 0)
+	if (ioctl(_fb.fd, FBIOGET_VSCREENINFO, &(_fb.vinfo)) < 0)
 		goto err;
-	vinfo.grayscale=0;
-	vinfo.bits_per_pixel=32;
-	if (ioctl(_fb.fd, FBIOPUT_VSCREENINFO, &vinfo) < 0)
+	_fb.vinfo.grayscale=0;
+	_fb.vinfo.bits_per_pixel=32;
+	if (ioctl(_fb.fd, FBIOPUT_VSCREENINFO, &(_fb.vinfo)) < 0)
 		goto err;
 
-	if (ioctl(_fb.fd, FBIOGET_FSCREENINFO, &finfo) < 0)
+	if (ioctl(_fb.fd, FBIOGET_FSCREENINFO, &(_fb.finfo)) < 0)
 		goto err;
-	screensize = vinfo.yres_virtual * finfo.line_length;
+	screensize = _fb.vinfo.yres_virtual * _fb.finfo.line_length;
 	if ((_fb.fbp = mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, _fb.fd, (off_t)0)) < 0)
 		goto err;
 	/*
 	 * Figure out underlying screen format.
 	 */
-	r = Rect(0, 0, vinfo.xres_virtual, vinfo.yres_virtual);
-
-	/*
-	 * _fb.depth is only the number of significant pixel bits,
-	 * not the total number of pixel bits.  We need to walk the
-	 * display list to find how many actual bits are used
-	 * per pixel.
-	 */
-
-	/*
-	 * Set up color map if necessary.
-	 */
-
-	/*
-	 * We get to choose the initial rectangle size.
-	 * This is arbitrary.  In theory we should read the
-	 * command line and allow the traditional X options.
-	 */
-
-	/*
-	 * Label and other properties required by ICCCCM.
-	 */
-
-	/*
-	 * Look up clipboard atom.
-	 */
-
-	/*
-	 * Put the window on the screen, check to see what size we actually got.
-	 */
-
-	/*
-	 * Allocate our local backing store.
-	 */
-
-	/*
-	 * Figure out physical window location.
-	 */
-
-	/*
-	 * Allocate some useful graphics contexts for the future.
-	 */
-	
-	for(int x = 0; x < vinfo.xres_virtual; x++) for (int y = 0; y < vinfo.yres_virtual; y++) {
-		long location = (x+vinfo.xoffset) * (vinfo.bits_per_pixel/8) + (y+vinfo.yoffset) * finfo.line_length;
-		*((uint32*)(_fb.fbp + location)) = 0x0000FF00;
-	}
+	r = Rect(0, 0, _fb.vinfo.xres_virtual, _fb.vinfo.yres_virtual);
 
 	_fb.screenimage = allocmemimage(r, XRGB32);
 	return _fb.screenimage;
 
 err:
-	oserror();
+	return nil;
 }
 
 /*
@@ -174,8 +125,21 @@ plan9cmap(void)
 void
 flushmemscreen(Rectangle r)
 {
+	Memimage *m = _fb.screenimage;
+	static Lock flushlock;
+	int x, y;
+
 	if(r.min.x >= r.max.x || r.min.y >= r.max.y)
 		return;
+
+	lock(&flushlock);
+	for (x = r.min.x; x < r.max.x; x++) for (y = r.min.y; y < r.min.y; y++){
+		long fbloc = (x+_fb.vinfo.xoffset) * (_fb.vinfo.bits_per_pixel/8) + (y+_fb.vinfo.yoffset) * _fb.finfo.line_length;
+		long miloc = (y*m->width) + x*4;
+
+		*((uint32*)(_fb.fbp + fbloc)) = *((uint32*)(m->data->bdata + miloc));
+	}
+	unlock(&flushlock);
 }
 
 static int
