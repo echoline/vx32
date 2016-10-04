@@ -28,7 +28,7 @@ _fbput(Memimage *m, Rectangle r) {
 		long fbloc = (x + y * m->width) * 4;
 		uint32 pixel = *((uint32*)(m->data->bdata + fbloc));
 
-		*((uint32*)(_fb.backbuf + fbloc)) = pixel;
+		*((uint32*)(_fb.fbp + fbloc)) = pixel;
 	}
 }
 
@@ -55,8 +55,6 @@ _fbattach(char *label, char *winsize)
 	_fb.screensize = _fb.vinfo.yres_virtual * _fb.finfo.line_length;
 	if ((_fb.fbp = mmap(0, _fb.screensize, PROT_READ | PROT_WRITE, MAP_SHARED, _fb.fd, (off_t)0)) < 0)
 		goto err;
-	_fb.backbuf = malloc(_fb.screensize);
-	_fb.cursbuf = malloc(_fb.screensize);
 	/*
 	 * Figure out underlying screen format.
 	 */
@@ -64,8 +62,9 @@ _fbattach(char *label, char *winsize)
 	mouserect = r;
 
 	_fb.screenimage = allocmemimage(r, XRGB32);
-	termreplacescreenimage(_fb.screenimage);
-	return _fb.screenimage;
+	_fb.backbuf = allocmemimage(r, XRGB32);
+	termreplacescreenimage(_fb.backbuf);
+	return _fb.backbuf;
 
 err:
 	return nil;
@@ -79,8 +78,7 @@ flushmemscreen(Rectangle r)
 	long fbloc;
 	int x2, y2;
 
-	_fbput(_fb.screenimage, r);
-	memcpy(_fb.cursbuf, _fb.backbuf, _fb.screensize);
+	memimagedraw(_fb.screenimage, r, _fb.backbuf, r.min, nil, r.min, S);
 
 	if (_fb.cursor != nil) {
 		p = fbmouse.xy;
@@ -107,16 +105,16 @@ flushmemscreen(Rectangle r)
 				fbloc = ((p.y+y2) * _fb.screenimage->r.max.x + (p.x+x2)) * 4;
 
 				if (_fb.cursor->clr[i] & (128 >> (x % 8))) {
-					*((uint32*)(_fb.cursbuf + fbloc)) = 0xFFFFFFFF;
+					*((uint32*)(_fb.screenimage->data->bdata + fbloc)) = 0xFFFFFFFF;
 				}
 
 				if (_fb.cursor->set[i] & (128 >> (x % 8))) {
-					*((uint32*)(_fb.cursbuf + fbloc)) = 0xFF000000;
+					*((uint32*)(_fb.screenimage->data->bdata + fbloc)) = 0xFF000000;
 				}
 			}
 		}
 	}
 
-	memcpy(_fb.fbp, _fb.cursbuf, _fb.screensize);
+	_fbput(_fb.screenimage, r);
 }
 

@@ -4,12 +4,12 @@ typedef struct FBprivate FBprivate;
 struct FBprivate {
 	uint32		chan;
 	int		fd;	/* of display */
+	int		mousefd;
 	uchar*		fbp;
-	uchar*		cursbuf;
-	uchar*		backbuf;
 	int		depth;				/* of screen */
 	Rectangle	newscreenr;
 	Memimage*	screenimage;
+	Memimage*	backbuf;
 	Rectangle	screenr;
 	uint		putsnarf;
 	char*		snarfbuf;

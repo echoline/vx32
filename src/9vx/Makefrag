@@ -236,7 +236,7 @@ PLAN9_fbdev_OBJS = \
 		fbdev-init.o \
 		fbdev-kernel.o \
 	)
-PLAN9_fbdev_LIBS = -lgpm
+PLAN9_fbdev_LIBS =
 
 PLAN9_osx_OBJS =\
 	$(addprefix 9vx/osx/, \

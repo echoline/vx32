@@ -13,9 +13,27 @@
 #include "mouse.h"
 #include "fbdev-inc.h"
 
-#include <gpm.h>
+#include <fcntl.h>
+#include <linux/input.h>
+#include <termios.h>
+#include <poll.h>
+
+#define MOUSEFILE "/dev/input/mice"
 
 Mouse fbmouse;
+
+static void
+termctl(uint32 o, int or)
+{
+	struct termios t;
+
+	tcgetattr(0, &t);
+	if (or)
+		t.c_lflag |= o;
+	else
+		t.c_lflag &= o;
+	tcsetattr(0, TCSANOW, &t);
+}
 
 static void
 fbputc(int c)
@@ -23,23 +41,12 @@ fbputc(int c)
 	kbdputc(kbdq, c);
 }
 
-static void
-_fbproc(void *v)
-{
-	int c;
-
-	for(;;) {
-		c = Gpm_Getc(stdin);
-		latin1putc(c, fbputc);
-	}
-}
-
 void
 screeninit(void)
 {
 }
 
-int fbgpmhandler(Gpm_Event *event, void *data)
+int __mouse(unsigned char *data)
 {
 	struct timeval tv;
 	Rectangle old, new;
@@ -52,8 +59,8 @@ int fbgpmhandler(Gpm_Event *event, void *data)
 	old.max.x = old.min.x + 16;
 	old.max.y = old.min.y + 16;
 
-	fbmouse.xy.x += event->dx * 3;
-	fbmouse.xy.y += event->dy * 3;
+	fbmouse.xy.x += (char)data[1];
+	fbmouse.xy.y -= (char)data[2];
 	if (fbmouse.xy.x < 0)
 		fbmouse.xy.x = 0;
 	if (fbmouse.xy.y < 0)
@@ -68,17 +75,16 @@ int fbgpmhandler(Gpm_Event *event, void *data)
 	new.max.x = new.min.x + 16;
 	new.max.y = new.min.y + 16;
 
-	fbmouse.buttons = 0;
-	if (fbmouse.buttons & 4)
-		fbmouse.buttons |= 1;
-	if (fbmouse.buttons & 2)
-		fbmouse.buttons |= 2;
-	if (fbmouse.buttons & 1)
-		fbmouse.buttons |= 4;
+	fbmouse.buttons = (data[0] & 1? 1: 0)
+			| (data[0] & 2? 4: 0)
+			| (data[0] & 4? 2: 0);
 
 	mousetrack(fbmouse.xy.x, fbmouse.xy.y, fbmouse.buttons, fbmouse.msec);
 
 	combinerect(&new, old);
+	new.min.x -= 16; // TODO ???
+	new.min.y -= 16;
+
 	if (new.min.x < 0)
 		new.min.x = 0;
 	if (new.min.y < 0)
@@ -93,34 +99,58 @@ int fbgpmhandler(Gpm_Event *event, void *data)
 	return 0;       
 }
 
+static void
+_fbproc(void *v)
+{
+	unsigned char data[3];
+	struct pollfd pfd[2];
+	int r;
+
+	pfd[0].fd = _fb.mousefd;
+	pfd[1].fd = 0;
+	pfd[0].events = pfd[1].events = POLLIN;
+
+	for(;;) {
+		r = poll(pfd, 2, -1);
+		if (r < 0)
+			oserror();
+		if (pfd[0].revents & POLLIN) {
+			if (read(_fb.mousefd, data, 3) != 3)
+				panic("mousefd read: %r");
+
+			__mouse(data);
+		}
+		if (pfd[1].revents & POLLIN) {
+			if (read(0, data, 1) != 1)
+				panic("stdio read: %r");
+			latin1putc(data[0], fbputc);
+		}
+	}
+
+	termctl(ECHO, 1);
+}
+
 uchar*
 attachscreen(Rectangle *r, ulong *chan, int *depth,
 	int *width, int *softscreen, void **X)
 {
 	Memimage *m;
-	Gpm_Connect conn;
 
-	if(_fb.screenimage == nil){
+	// set up terminal
+	printf("\x1b[?17;0;0c\n");
+	termctl(~(ICANON|ECHO), 0);
+
+	if(_fb.backbuf == nil){
 		_memimageinit();
 		if(_fbattach("9vx", nil) == nil)
 			panic("cannot connect to framebuffer: %r");
 
-		conn.eventMask = ~0;
-		conn.defaultMask = 0;
-		conn.minMod = 0;
-		conn.maxMod= ~0;
-
-		if (Gpm_Open(&conn, 0) == -1)
-			panic("cannot connect to gpm: %r");
-
-		gpm_handler = fbgpmhandler;
+		if ((_fb.mousefd = open(MOUSEFILE, O_RDONLY)) == -1)
+			panic("cannot connect to mouse: %r");
 
 		kproc("*fbdev*", _fbproc, nil);
 	}
-
-	printf("\x1b[?17;0;0c\n");
-
-	m = _fb.screenimage;
+	m = _fb.backbuf;
 	*r = m->r;
 	*chan = m->chan;
 	*depth = m->depth;
