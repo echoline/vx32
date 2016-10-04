@@ -4,7 +4,7 @@
 #include "dat.h"
 #include "fns.h"
 #include "error.h"
-#define Image IMAGE	/* kernel has its own Image */
+#define Image IMAGE
 #include <draw.h>
 #include <memdraw.h>
 #include <keyboard.h>
@@ -15,26 +15,22 @@
 
 #include <gpm.h>
 
-#define MouseMask (\
-	ButtonPressMask|\
-	ButtonReleaseMask|\
-	PointerMotionMask|\
-	Button1MotionMask|\
-	Button2MotionMask|\
-	Button3MotionMask)
+Mouse fbmouse;
 
-Rectangle windowrect;
-Rectangle screenrect;
-int fullscreen;
+static void
+fbputc(int c)
+{
+	kbdputc(kbdq, c);
+}
 
 static void
 _fbproc(void *v)
 {
 	int c;
 
-	for(;;){
-		while((c = Gpm_Getc(stdin)) != EOF)
-			kbdputc(kbdq, c);
+	for(;;) {
+		c = Gpm_Getc(stdin);
+		latin1putc(c, fbputc);
 	}
 }
 
@@ -45,7 +41,55 @@ screeninit(void)
 
 int fbgpmhandler(Gpm_Event *event, void *data)
 {
-//	printf("Event Type : %d at x=%d y=%d\n", event->type, event->x, event->y);
+	struct timeval tv;
+	Rectangle old, new;
+
+	gettimeofday(&tv, nil);
+	fbmouse.msec = tv.tv_usec / 1000 + tv.tv_sec * 1000;
+
+	old.min.x = fbmouse.xy.x;
+	old.min.y = fbmouse.xy.y;
+	old.max.x = old.min.x + 16;
+	old.max.y = old.min.y + 16;
+
+	fbmouse.xy.x += event->dx * 3;
+	fbmouse.xy.y += event->dy * 3;
+	if (fbmouse.xy.x < 0)
+		fbmouse.xy.x = 0;
+	if (fbmouse.xy.y < 0)
+		fbmouse.xy.y = 0;
+	if (fbmouse.xy.x > _fb.screenimage->r.max.x)
+		fbmouse.xy.x = _fb.screenimage->r.max.x;
+	if (fbmouse.xy.y > _fb.screenimage->r.max.y)
+		fbmouse.xy.y = _fb.screenimage->r.max.y;
+	
+	new.min.x = fbmouse.xy.x;
+	new.min.y = fbmouse.xy.y;
+	new.max.x = new.min.x + 16;
+	new.max.y = new.min.y + 16;
+
+	fbmouse.buttons = 0;
+	if (fbmouse.buttons & 4)
+		fbmouse.buttons |= 1;
+	if (fbmouse.buttons & 2)
+		fbmouse.buttons |= 2;
+	if (fbmouse.buttons & 1)
+		fbmouse.buttons |= 4;
+
+	mousetrack(fbmouse.xy.x, fbmouse.xy.y, fbmouse.buttons, fbmouse.msec);
+
+	combinerect(&new, old);
+	if (new.min.x < 0)
+		new.min.x = 0;
+	if (new.min.y < 0)
+		new.min.y = 0;
+	if (new.max.x > _fb.screenimage->r.max.x)
+		new.max.x = _fb.screenimage->r.max.x;
+	if (new.max.y > _fb.screenimage->r.max.y)
+		new.max.y = _fb.screenimage->r.max.y;
+
+	flushmemscreen(new);
+
 	return 0;       
 }
 
@@ -73,6 +117,9 @@ attachscreen(Rectangle *r, ulong *chan, int *depth,
 
 		kproc("*fbdev*", _fbproc, nil);
 	}
+
+	printf("\x1b[?17;0;0c\n");
+
 	m = _fb.screenimage;
 	*r = m->r;
 	*chan = m->chan;
@@ -126,14 +173,12 @@ putsnarf(char *data)
 void
 setmouse(Point p)
 {
-	drawqlock();
-	drawqunlock();
+	fbmouse.xy = p;
 }
 
 void
 setcursor(struct Cursor *c)
 {
-	drawqlock();
-	drawqunlock();
+	_fb.cursor = c;
 }
 

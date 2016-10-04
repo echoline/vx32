@@ -4,12 +4,13 @@
 #include "dat.h"
 #include "fns.h"
 #include "error.h"
-#define Image IMAGE	/* kernel has its own Image */
+#define Image IMAGE
 #include <draw.h>
 #include <memdraw.h>
 #include <keyboard.h>
 #include <cursor.h>
 #include "screen.h"
+#include "mouse.h"
 #include "fbdev-inc.h"
 
 /*
@@ -60,15 +61,6 @@ memfillcolor(Memimage *m, uint32 val)
 {
 	_memfillcolor(m, val);
 
-}
-
-static void
-addrect(Rectangle *rp, Rectangle r)
-{
-	if(rp->min.x >= rp->max.x)
-		*rp = r;
-	else
-		combinerect(rp, r);
 }
 
 int
