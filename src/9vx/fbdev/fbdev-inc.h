@@ -19,6 +19,7 @@ struct FBprivate {
 	struct fb_var_screeninfo vinfo;
 	long		screensize;
 	struct Cursor*	cursor;
+	char		shift_state;
 };
 
 extern FBprivate _fb;

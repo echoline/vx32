@@ -17,6 +17,8 @@
 #include <linux/input.h>
 #include <termios.h>
 #include <poll.h>
+#include <sys/ioctl.h>
+#include <linux/keyboard.h>
 
 #define MOUSEFILE "/dev/input/mice"
 
@@ -46,7 +48,8 @@ screeninit(void)
 {
 }
 
-int __mouse(unsigned char *data)
+int
+__mouse(unsigned char *data)
 {
 	struct timeval tv;
 	Rectangle old, new;
@@ -72,17 +75,17 @@ int __mouse(unsigned char *data)
 	
 	new.min.x = fbmouse.xy.x;
 	new.min.y = fbmouse.xy.y;
-	new.max.x = new.min.x + 16;
+	new.max.x = new.min.x + 16; // size of cursor bitmap
 	new.max.y = new.min.y + 16;
 
-	fbmouse.buttons = (data[0] & 1? 1: 0)
-			| (data[0] & 2? 4: 0)
-			| (data[0] & 4? 2: 0);
+	fbmouse.buttons = (data[0] & 1? 1: 0)	// LEFT
+			| (data[0] & 2? (_fb.shift_state & (1 << KG_SHIFT)? 2: 4): 0) // RIGHT
+			| (data[0] & 4? 2: 0);	// MIDDLE
 
 	mousetrack(fbmouse.xy.x, fbmouse.xy.y, fbmouse.buttons, fbmouse.msec);
 
 	combinerect(&new, old);
-	new.min.x -= 16; // TODO ???
+	new.min.x -= 16; // to encompass any _fb.cursor->offset
 	new.min.y -= 16;
 
 	if (new.min.x < 0)
@@ -111,6 +114,10 @@ _fbproc(void *v)
 	pfd[0].events = pfd[1].events = POLLIN;
 
 	for(;;) {
+		_fb.shift_state = 6;
+		if (ioctl(0, TIOCLINUX, &_fb.shift_state) < 0)
+			panic("ioctl TIOCLINUX 6: %r");
+
 		r = poll(pfd, 2, -1);
 		if (r < 0)
 			oserror();
@@ -143,10 +150,10 @@ attachscreen(Rectangle *r, ulong *chan, int *depth,
 	if(_fb.backbuf == nil){
 		_memimageinit();
 		if(_fbattach("9vx", nil) == nil)
-			panic("cannot connect to framebuffer: %r");
+			panic("cannot open framebuffer: %r");
 
 		if ((_fb.mousefd = open(MOUSEFILE, O_RDONLY)) == -1)
-			panic("cannot connect to mouse: %r");
+			panic("cannot open mouse: %r");
 
 		kproc("*fbdev*", _fbproc, nil);
 	}
