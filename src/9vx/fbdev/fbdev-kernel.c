@@ -41,8 +41,12 @@ static void
 fbputc(int c)
 {
 	static int escaped = 0;
+	static int number;
+	char digit[2] = { 0, 0 };
 
 	if (escaped == 1) {
+		number = 0;
+
 		if (c == '[') {
 			escaped = 2;
 			return;
@@ -51,6 +55,13 @@ fbputc(int c)
 			kbdputc(kbdq, 27);
 		}
 	} else if (escaped == 2) {
+		if (isdigit(c)) {
+			digit[0] = c;
+			number *= 10;
+			number += atoi(digit);
+			return;
+		}
+
 		switch (c) {
 			case 'A':
 				c = Kup;
@@ -64,6 +75,16 @@ fbputc(int c)
 			case 'D':
 				c = Kleft;
 				break;
+			case '~':
+				switch (number) {
+					case 3:
+						c = Kdel;
+						break;
+					case 0:
+					default:
+						break;
+				}
+				break;
 			default:
 				kbdputc(kbdq, 27);
 				kbdputc(kbdq, '[');
@@ -76,6 +97,11 @@ fbputc(int c)
 		case 27:
 			escaped = 1;
 			return;
+		case Kdel:
+			if (number)
+				break;
+			c = Kbs;
+			break;
 		default:
 			break;
 	}
