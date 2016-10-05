@@ -70,6 +70,41 @@ err:
 	return nil;
 }
 
+int
+_mouseattach(int id)
+{
+	char line[PATH_MAX+1024];
+	char mousefile[PATH_MAX] = "";
+	char search[31];
+	char *ptr;
+
+	if (id >= 0)
+		snprintf(search, 31, "mouse%d", id);
+	else
+		strcpy(search, "mouse");
+
+	FILE *devices = fopen("/proc/bus/input/devices", "r");
+	while (fgets(line, sizeof(line)-1, devices) != nil) {
+		if (line[0] == 'H') {
+			if (strstr(line, search) != NULL) {
+				ptr = strstr(line, "event");
+				if (!ptr)
+					continue;
+				ptr[strcspn(ptr, " \n\r")] = '\0';
+				snprintf(mousefile, sizeof(mousefile)-1, "/dev/input/%s", ptr);
+				break;
+			}
+		}
+	}
+	fclose(devices);
+
+	if (mousefile[0] == '\0')
+		return -1;
+
+	_fb.mousefd = open(mousefile, O_RDONLY);
+	return _fb.mousefd;
+}
+
 void
 flushmemscreen(Rectangle r)
 {

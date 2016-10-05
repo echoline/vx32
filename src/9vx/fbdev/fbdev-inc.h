@@ -25,4 +25,4 @@ struct FBprivate {
 extern FBprivate _fb;
 
 extern Memimage*	_fbattach(char*, char*);
-
+extern int		_mouseattach(int);

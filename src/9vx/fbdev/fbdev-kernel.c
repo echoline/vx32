@@ -20,8 +20,6 @@
 #include <sys/ioctl.h>
 #include <linux/keyboard.h>
 
-#define MOUSEFILE "/dev/input/mice"
-
 Mouse fbmouse;
 
 static void
@@ -63,48 +61,48 @@ fbputc(int c)
 		}
 
 		switch (c) {
-			case 'A':
-				c = Kup;
+		case 'A':
+			c = Kup;
+			break;
+		case 'B':
+			c = Kdown;
+			break;
+		case 'C':
+			c = Kright;
+			break;
+		case 'D':
+			c = Kleft;
+			break;
+		case '~':
+			switch (number) {
+			case 1:
+				c = Khome;
 				break;
-			case 'B':
-				c = Kdown;
+			case 2:
+				c = Kins;
 				break;
-			case 'C':
-				c = Kright;
+			case 3:
+				c = Kdel;
 				break;
-			case 'D':
-				c = Kleft;
+			case 4:
+				c = Kend;
 				break;
-			case '~':
-				switch (number) {
-					case 1:
-						c = Khome;
-						break;
-					case 2:
-						c = Kins;
-						break;
-					case 3:
-						c = Kdel;
-						break;
-					case 4:
-						c = Kend;
-						break;
-					case 5:
-						c = Kpgup;
-						break;
-					case 6:
-						c = Kpgdown;
-						break;
-					case 0:
-					default:
-						escaped = 0;
-						return;
-				}
+			case 5:
+				c = Kpgup;
 				break;
+			case 6:
+				c = Kpgdown;
+				break;
+			case 0:
 			default:
-				kbdputc(kbdq, 27);
-				kbdputc(kbdq, '[');
-				break;
+				escaped = 0;
+				return;
+			}
+			break;
+		default:
+			kbdputc(kbdq, 27);
+			kbdputc(kbdq, '[');
+			break;
 		}
 		escaped = 0;
 	}
@@ -138,10 +136,10 @@ screeninit(void)
 }
 
 int
-__mouse(unsigned char *data)
+__mouse(struct input_event *event)
 {
 	struct timeval tv;
-	Rectangle old, new;
+	Rectangle old, new = Rect(0,0,0,0);
 
 	gettimeofday(&tv, nil);
 	fbmouse.msec = tv.tv_usec / 1000 + tv.tv_sec * 1000;
@@ -151,8 +149,53 @@ __mouse(unsigned char *data)
 	old.max.x = old.min.x + 16;
 	old.max.y = old.min.y + 16;
 
-	fbmouse.xy.x += (char)data[1];
-	fbmouse.xy.y -= (char)data[2];
+	//printf("%x %x %x\n", event->type, event->code, event->value);
+
+	fbmouse.buttons &= ~0x18; // clear mosuewheel
+
+	switch (event->type) {
+	case 2:
+		switch (event->code) {
+		case 0:
+			fbmouse.xy.x += event->value;
+			break;
+		case 1:
+			fbmouse.xy.y += event->value;
+			break;
+		case 8:
+			fbmouse.buttons |= (event->value == 1? 8: 16);	// LEFT
+			break;
+		default:
+			return -1;
+		}
+		break;
+	case 1:
+		switch (event->code) {
+		case 0x110:
+			if (event->value == 1)
+				fbmouse.buttons |= 1;
+			else
+				fbmouse.buttons &= ~1;
+			break;
+		case 0x111:
+			if (event->value == 1)
+				fbmouse.buttons |= (_fb.shift_state & (1 << KG_SHIFT)? 2: 4);
+			else
+				fbmouse.buttons &= ~(_fb.shift_state & (1 << KG_SHIFT)? 2: 4);
+			break;
+		case 0x112:
+			if (event->value == 1)
+				fbmouse.buttons |= 2;
+			else
+				fbmouse.buttons &= ~2;
+			break;
+		default:
+			return -1;
+		}
+	default:
+		return -1;
+	}
+
 	if (fbmouse.xy.x < 0)
 		fbmouse.xy.x = 0;
 	if (fbmouse.xy.y < 0)
@@ -167,12 +210,6 @@ __mouse(unsigned char *data)
 	new.max.x = new.min.x + 16; // size of cursor bitmap
 	new.max.y = new.min.y + 16;
 
-	fbmouse.buttons = (data[0] & 1? 1: 0)	// LEFT
-			| (data[0] & 2? (_fb.shift_state & (1 << KG_SHIFT)? 2: 4): 0) // RIGHT
-			| (data[0] & 4? 2: 0);	// MIDDLE
-
-	mousetrack(fbmouse.xy.x, fbmouse.xy.y, fbmouse.buttons, fbmouse.msec);
-
 	combinerect(&new, old);
 	new.min.x -= 16; // to encompass any _fb.cursor->offset
 	new.min.y -= 16;
@@ -186,6 +223,8 @@ __mouse(unsigned char *data)
 	if (new.max.y > _fb.screenimage->r.max.y)
 		new.max.y = _fb.screenimage->r.max.y;
 
+	mousetrack(fbmouse.xy.x, fbmouse.xy.y, fbmouse.buttons, fbmouse.msec);
+
 	flushmemscreen(new);
 
 	return 0;       
@@ -194,7 +233,8 @@ __mouse(unsigned char *data)
 static void
 _fbproc(void *v)
 {
-	unsigned char data[3];
+	struct input_event data;
+	unsigned char c;
 	struct pollfd pfd[2];
 	int r;
 
@@ -211,15 +251,15 @@ _fbproc(void *v)
 		if (r < 0)
 			oserror();
 		if (pfd[0].revents & POLLIN) {
-			if (read(_fb.mousefd, data, 3) != 3)
+			if (read(_fb.mousefd, &data, sizeof(data)) != sizeof(data))
 				panic("mousefd read: %r");
 
-			__mouse(data);
+			__mouse(&data);
 		}
 		if (pfd[1].revents & POLLIN) {
-			if (read(0, data, 1) != 1)
+			if (read(0, &c, 1) != 1)
 				panic("stdio read: %r");
-			latin1putc(data[0], fbputc);
+			latin1putc(c, fbputc);
 		}
 	}
 
@@ -242,7 +282,7 @@ attachscreen(Rectangle *r, ulong *chan, int *depth,
 		if(_fbattach("9vx", nil) == nil)
 			panic("cannot open framebuffer: %r");
 
-		if ((_fb.mousefd = open(MOUSEFILE, O_RDONLY)) == -1)
+		if (_mouseattach(-1) < 0)
 			panic("cannot open mouse: %r");
 
 		kproc("*fbdev*", _fbproc, nil);
