@@ -235,6 +235,8 @@ PLAN9_fbdev_OBJS = \
 		fbdev-draw.o \
 		fbdev-init.o \
 		fbdev-kernel.o \
+		fbdev-keyboard.o \
+		fbdev-mouse.o \
 	)
 PLAN9_fbdev_LIBS =
 

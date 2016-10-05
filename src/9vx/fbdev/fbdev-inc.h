@@ -1,4 +1,5 @@
 #include <linux/fb.h>
+#include <linux/input.h>
 
 typedef struct FBprivate FBprivate;
 struct FBprivate {
@@ -26,3 +27,7 @@ extern FBprivate _fb;
 
 extern Memimage*	_fbattach(char*, char*);
 extern int		_mouseattach(int);
+extern int		__mouse(struct input_event*);
+extern void		ctrlc(int sig);
+extern void		fbputc(int c);
+extern void		termctl(uint32 o, int);
