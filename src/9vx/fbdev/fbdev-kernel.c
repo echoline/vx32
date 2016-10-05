@@ -77,12 +77,28 @@ fbputc(int c)
 				break;
 			case '~':
 				switch (number) {
+					case 1:
+						c = Khome;
+						break;
+					case 2:
+						c = Kins;
+						break;
 					case 3:
 						c = Kdel;
 						break;
+					case 4:
+						c = Kend;
+						break;
+					case 5:
+						c = Kpgup;
+						break;
+					case 6:
+						c = Kpgdown;
+						break;
 					case 0:
 					default:
-						break;
+						escaped = 0;
+						return;
 				}
 				break;
 			default:
@@ -98,8 +114,10 @@ fbputc(int c)
 			escaped = 1;
 			return;
 		case Kdel:
-			if (number)
+			if (number == 3) {
+				number = 0;
 				break;
+			}
 			c = Kbs;
 			break;
 		default:
