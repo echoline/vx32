@@ -240,7 +240,7 @@ setcolor(ulong i, ulong r, ulong g, ulong b)
 char*
 getsnarf(void)
 {
-	return _fb.snarfbuf? _fb.snarfbuf: "";
+	return strdup(_fb.snarfbuf? _fb.snarfbuf: "");
 }
 
 void
