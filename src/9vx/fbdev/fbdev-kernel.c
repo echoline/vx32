@@ -257,6 +257,7 @@ void
 setmouse(Point p)
 {
 	fbmouse.xy = p;
+	flushmemscreen(_fb.screenimage->r);
 }
 
 void

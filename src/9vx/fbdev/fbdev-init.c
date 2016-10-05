@@ -25,10 +25,10 @@ _fbput(Memimage *m, Rectangle r) {
 	int x, y;
 
 	for (x = r.min.x; x < r.max.x; x++) for (y = r.min.y; y < r.max.y; y++){
-		long fbloc = (x + y * m->width) * 4;
-		uint32 pixel = *((uint32*)(m->data->bdata + fbloc));
+		long loc = (x + y * m->width) * 4;
+		uint32 pixel = *((uint32*)(m->data->bdata + loc));
 
-		*((uint32*)(_fb.fbp + fbloc)) = pixel;
+		*((uint32*)(_fb.fbp + loc)) = pixel;
 	}
 }
 
