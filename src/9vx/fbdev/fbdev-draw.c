@@ -16,6 +16,7 @@
 /*
  * Replacements for libmemdraw routines.
  * (They've been underscored.)
+ * TODO is this where acceleration would go?
  */
 Memimage*
 allocmemimage(Rectangle r, uint32 chan)
@@ -36,10 +37,7 @@ freememimage(Memimage *m)
 int
 cloadmemimage(Memimage *i, Rectangle r, uchar *data, int ndata)
 {
-	int n;
-
-	n = _cloadmemimage(i, r, data, ndata);
-	return n;
+	return _cloadmemimage(i, r, data, ndata);
 }
 
 void
@@ -51,7 +49,6 @@ memimagedraw(Memimage *dst, Rectangle r, Memimage *src, Point sp,
 	if((par = _memimagedrawsetup(dst, r, src, sp, mask, mp, op)) == nil)
 		return;
 
-	/* now can run memimagedraw on the in-memory bits */
 	_memimagedraw(par);
 
 }
