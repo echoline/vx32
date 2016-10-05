@@ -38,7 +38,52 @@ termctl(uint32 o, int or)
 static void
 fbputc(int c)
 {
+	static int escaped = 0;
+
+	if (escaped == 1) {
+		if (c == '[') {
+			escaped = 2;
+			return;
+		} else {
+			escaped = 0;
+			kbdputc(kbdq, 27);
+		}
+	} else if (escaped == 2) {
+		switch (c) {
+			case 'A':
+				c = Kup;
+				break;
+			case 'B':
+				c = Kdown;
+				break;
+			case 'C':
+				c = Kright;
+				break;
+			case 'D':
+				c = Kleft;
+				break;
+			default:
+				kbdputc(kbdq, 27);
+				kbdputc(kbdq, '[');
+				break;
+		}
+		escaped = 0;
+	}
+
+	switch (c) {
+		case 27:
+			escaped = 1;
+			return;
+		default:
+			break;
+	}
+
 	kbdputc(kbdq, c);
+}
+
+static void
+ctrlc(int sig) {
+	latin1putc(3, fbputc);
 }
 
 void
@@ -139,6 +184,7 @@ attachscreen(Rectangle *r, ulong *chan, int *depth,
 	// set up terminal
 	printf("\x1b[?17;0;0c\n");
 	termctl(~(ICANON|ECHO), 0);
+	signal(SIGINT, ctrlc);
 
 	if(_fb.backbuf == nil){
 		_memimageinit();
