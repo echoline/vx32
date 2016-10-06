@@ -50,7 +50,7 @@ __mouse(struct input_event *event)
 		case 0x1c:
 			if (event->value == 0)
 				touched = 0;
-			else {
+			else if (event->value > 24){
 				touched = 1;
 				startmousept = coord;
 				startpt = _fb.mouse.xy;
