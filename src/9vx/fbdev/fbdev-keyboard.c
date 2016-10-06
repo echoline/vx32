@@ -44,6 +44,9 @@ fbputc(int c)
 		} else {
 			escaped = 0;
 			kbdputc(kbdq, 27);
+			// double Kesc press = Kesc
+			if (c == 27)
+				return;
 		}
 	} else if (escaped == 2) {
 		if (isdigit(c)) {
