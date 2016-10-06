@@ -16,8 +16,6 @@
 #include <linux/input.h>
 #include <linux/keyboard.h>
 
-extern Mouse fbmouse;
-
 int
 __mouse(struct input_event *event)
 {
@@ -29,14 +27,14 @@ __mouse(struct input_event *event)
 	static Point coord;
 
 	gettimeofday(&tv, nil);
-	fbmouse.msec = tv.tv_usec / 1000 + tv.tv_sec * 1000;
+	_fb.mouse.msec = tv.tv_usec * 1000000000LL + tv.tv_sec * 1000;
 
-	old.min.x = fbmouse.xy.x;
-	old.min.y = fbmouse.xy.y;
+	old.min.x = _fb.mouse.xy.x;
+	old.min.y = _fb.mouse.xy.y;
 	old.max.x = old.min.x + 16;
 	old.max.y = old.min.y + 16;
 
-	fbmouse.buttons &= ~0x18; // clear mosuewheel
+	_fb.mouse.buttons &= ~0x18; // clear mosuewheel
 
 	switch (event->type) {
 	case 3:
@@ -55,25 +53,25 @@ __mouse(struct input_event *event)
 			else {
 				touched = 1;
 				startmousept = coord;
-				startpt = fbmouse.xy;
+				startpt = _fb.mouse.xy;
 			}
 			break;
 		default:
 			return -1;
 		}
 		if (touched)
-			fbmouse.xy = addpt(startpt, divpt(subpt(coord, startmousept), 4));
+			_fb.mouse.xy = addpt(startpt, divpt(subpt(coord, startmousept), 4));
 		break;
 	case 2:
 		switch (event->code) {
 		case 0:
-			fbmouse.xy.x += event->value;
+			_fb.mouse.xy.x += event->value;
 			break;
 		case 1:
-			fbmouse.xy.y += event->value;
+			_fb.mouse.xy.y += event->value;
 			break;
 		case 8:
-			fbmouse.buttons |= (event->value == 1? 8: 16); // wheel
+			_fb.mouse.buttons |= (event->value == 1? 8: 16); // wheel
 			break;
 		default:
 			return -1;
@@ -83,21 +81,21 @@ __mouse(struct input_event *event)
 		switch (event->code) {
 		case 0x110:
 			if (event->value == 1)
-				fbmouse.buttons |= 1;
+				_fb.mouse.buttons |= 1;
 			else
-				fbmouse.buttons &= ~1;
+				_fb.mouse.buttons &= ~1;
 			break;
 		case 0x111:
 			if (event->value == 1)
-				fbmouse.buttons |= (_fb.shift_state & (1 << KG_SHIFT)? 2: 4);
+				_fb.mouse.buttons |= (_fb.shift_state & (1 << KG_SHIFT)? 2: 4);
 			else
-				fbmouse.buttons &= ~(_fb.shift_state & (1 << KG_SHIFT)? 2: 4);
+				_fb.mouse.buttons &= ~(_fb.shift_state & (1 << KG_SHIFT)? 2: 4);
 			break;
 		case 0x112:
 			if (event->value == 1)
-				fbmouse.buttons |= 2;
+				_fb.mouse.buttons |= 2;
 			else
-				fbmouse.buttons &= ~2;
+				_fb.mouse.buttons &= ~2;
 			break;
 		default:
 			return -1;
@@ -107,17 +105,17 @@ __mouse(struct input_event *event)
 		return -1;
 	}
 
-	if (fbmouse.xy.x < 0)
-		fbmouse.xy.x = 0;
-	if (fbmouse.xy.y < 0)
-		fbmouse.xy.y = 0;
-	if (fbmouse.xy.x > _fb.screenimage->r.max.x)
-		fbmouse.xy.x = _fb.screenimage->r.max.x;
-	if (fbmouse.xy.y > _fb.screenimage->r.max.y)
-		fbmouse.xy.y = _fb.screenimage->r.max.y;
+	if (_fb.mouse.xy.x < 0)
+		_fb.mouse.xy.x = 0;
+	if (_fb.mouse.xy.y < 0)
+		_fb.mouse.xy.y = 0;
+	if (_fb.mouse.xy.x > _fb.screenimage->r.max.x)
+		_fb.mouse.xy.x = _fb.screenimage->r.max.x;
+	if (_fb.mouse.xy.y > _fb.screenimage->r.max.y)
+		_fb.mouse.xy.y = _fb.screenimage->r.max.y;
 	
-	new.min.x = fbmouse.xy.x;
-	new.min.y = fbmouse.xy.y;
+	new.min.x = _fb.mouse.xy.x;
+	new.min.y = _fb.mouse.xy.y;
 	new.max.x = new.min.x + 16; // size of cursor bitmap
 	new.max.y = new.min.y + 16;
 
@@ -134,7 +132,7 @@ __mouse(struct input_event *event)
 	if (new.max.y > _fb.screenimage->r.max.y)
 		new.max.y = _fb.screenimage->r.max.y;
 
-	mousetrack(fbmouse.xy.x, fbmouse.xy.y, fbmouse.buttons, fbmouse.msec);
+	mousetrack(_fb.mouse.xy.x, _fb.mouse.xy.y, _fb.mouse.buttons, _fb.mouse.msec);
 
 	flushmemscreen(new);
 
@@ -160,7 +158,7 @@ putsnarf(char *data)
 void
 setmouse(Point p)
 {
-	fbmouse.xy = p;
+	_fb.mouse.xy = p;
 	flushmemscreen(_fb.screenimage->r);
 }
 
