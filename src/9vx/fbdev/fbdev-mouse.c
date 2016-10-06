@@ -23,6 +23,10 @@ __mouse(struct input_event *event)
 {
 	struct timeval tv;
 	Rectangle old, new;
+	static Point startpt;
+	static Point startmousept;
+	static char touched;
+	static Point coord;
 
 	gettimeofday(&tv, nil);
 	fbmouse.msec = tv.tv_usec / 1000 + tv.tv_sec * 1000;
@@ -32,11 +36,33 @@ __mouse(struct input_event *event)
 	old.max.x = old.min.x + 16;
 	old.max.y = old.min.y + 16;
 
-	//printf("%x %x %x\n", event->type, event->code, event->value);
-
 	fbmouse.buttons &= ~0x18; // clear mosuewheel
 
 	switch (event->type) {
+	case 3:
+		//printf("%x %x %x\n", event->type, event->code, event->value);
+		switch (event->code) {
+		case 0:	
+			coord.x = event->value;
+			break;
+		case 1:
+			coord.y = event->value;
+			break;
+		case 0x18:
+			if (event->value == 0)
+				touched = 0;
+			else {
+				touched = 1;
+				startmousept = coord;
+				startpt = fbmouse.xy;
+			}
+			break;
+		default:
+			return -1;
+		}
+		if (touched)
+			fbmouse.xy = addpt(startpt, divpt(subpt(coord, startmousept), 3));
+		break;
 	case 2:
 		switch (event->code) {
 		case 0:
@@ -49,7 +75,7 @@ __mouse(struct input_event *event)
 			fbmouse.buttons |= (event->value == 1? 8: 16); // wheel
 			break;
 		default:
-			break;
+			return -1;
 		}
 		break;
 	case 1:
