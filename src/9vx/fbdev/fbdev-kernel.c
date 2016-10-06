@@ -20,8 +20,6 @@
 #include <sys/ioctl.h>
 #include <linux/keyboard.h>
 
-Mouse fbmouse;
-
 void
 screeninit(void)
 {

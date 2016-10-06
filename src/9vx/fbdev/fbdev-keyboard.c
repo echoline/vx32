@@ -15,8 +15,6 @@
 
 #include <termios.h>
 
-extern Mouse fbmouse;
-
 void
 termctl(uint32 o, int or)
 {

@@ -5,7 +5,6 @@ typedef struct FBprivate FBprivate;
 struct FBprivate {
 	uint32		chan;
 	int		fd;	/* of display */
-	int		mousefd;
 	uchar*		fbp;
 	int		depth;				/* of screen */
 	Rectangle	newscreenr;
@@ -19,6 +18,8 @@ struct FBprivate {
 	struct fb_fix_screeninfo finfo;
 	struct fb_var_screeninfo vinfo;
 	long		screensize;
+	int		mousefd;
+	Mouse		mouse;
 	struct Cursor*	cursor;
 	char		shift_state;
 };

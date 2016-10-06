@@ -18,8 +18,6 @@
 
 FBprivate _fb;
 
-extern Mouse fbmouse;
-
 void
 _fbput(Memimage *m, Rectangle r) {
 	int x, y;
@@ -116,7 +114,7 @@ flushmemscreen(Rectangle r)
 	memimagedraw(_fb.screenimage, r, _fb.backbuf, r.min, nil, r.min, S);
 
 	if (_fb.cursor != nil) {
-		p = fbmouse.xy;
+		p = _fb.mouse.xy;
 
 		for (x = 0; x < 16; x++) {
 			x2 = x + _fb.cursor->offset.x;
