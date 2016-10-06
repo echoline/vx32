@@ -29,10 +29,8 @@ __mouse(struct input_event *event)
 	gettimeofday(&tv, nil);
 	_fb.mouse.msec = tv.tv_usec * 1000000000LL + tv.tv_sec * 1000;
 
-	old.min.x = _fb.mouse.xy.x;
-	old.min.y = _fb.mouse.xy.y;
-	old.max.x = old.min.x + 16;
-	old.max.y = old.min.y + 16;
+	old.min = _fb.mouse.xy;
+	old.max = addpt(old.min, Pt(16, 16));
 
 	_fb.mouse.buttons &= ~0x18; // clear mosuewheel
 
@@ -105,32 +103,22 @@ __mouse(struct input_event *event)
 		return -1;
 	}
 
-	if (_fb.mouse.xy.x < 0)
-		_fb.mouse.xy.x = 0;
-	if (_fb.mouse.xy.y < 0)
-		_fb.mouse.xy.y = 0;
+	if (_fb.mouse.xy.x < _fb.screenimage->r.min.x)
+		_fb.mouse.xy.x = _fb.screenimage->r.min.x;
+	if (_fb.mouse.xy.y < _fb.screenimage->r.min.y)
+		_fb.mouse.xy.y = _fb.screenimage->r.min.y;
 	if (_fb.mouse.xy.x > _fb.screenimage->r.max.x)
 		_fb.mouse.xy.x = _fb.screenimage->r.max.x;
 	if (_fb.mouse.xy.y > _fb.screenimage->r.max.y)
 		_fb.mouse.xy.y = _fb.screenimage->r.max.y;
 	
-	new.min.x = _fb.mouse.xy.x;
-	new.min.y = _fb.mouse.xy.y;
-	new.max.x = new.min.x + 16; // size of cursor bitmap
-	new.max.y = new.min.y + 16;
+	new.min = _fb.mouse.xy;
+	new.max = addpt(new.min, Pt(16, 16)); // size of cursor bitmap
 
 	combinerect(&new, old);
-	new.min.x -= 16; // to encompass any _fb.cursor->offset
-	new.min.y -= 16;
+	new.min = subpt(new.min, Pt(16, 16)); // to encompass any _fb.cursor->offset
 
-	if (new.min.x < 0)
-		new.min.x = 0;
-	if (new.min.y < 0)
-		new.min.y = 0;
-	if (new.max.x > _fb.screenimage->r.max.x)
-		new.max.x = _fb.screenimage->r.max.x;
-	if (new.max.y > _fb.screenimage->r.max.y)
-		new.max.y = _fb.screenimage->r.max.y;
+	rectclip(&new, _fb.screenimage->r);
 
 	mousetrack(_fb.mouse.xy.x, _fb.mouse.xy.y, _fb.mouse.buttons, _fb.mouse.msec);
 
