@@ -49,6 +49,7 @@ __mouse(struct input_event *event)
 			coord.y = event->value;
 			break;
 		case 0x18:
+		case 0x1c:
 			if (event->value == 0)
 				touched = 0;
 			else {
@@ -61,7 +62,7 @@ __mouse(struct input_event *event)
 			return -1;
 		}
 		if (touched)
-			fbmouse.xy = addpt(startpt, divpt(subpt(coord, startmousept), 3));
+			fbmouse.xy = addpt(startpt, divpt(subpt(coord, startmousept), 4));
 		break;
 	case 2:
 		switch (event->code) {
@@ -166,6 +167,8 @@ setmouse(Point p)
 void
 setcursor(struct Cursor *c)
 {
+	drawqlock();
 	_fb.cursor = c;
+	drawqunlock();
 }
 

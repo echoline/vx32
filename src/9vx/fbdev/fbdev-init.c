@@ -22,13 +22,13 @@ extern Mouse fbmouse;
 
 void
 _fbput(Memimage *m, Rectangle r) {
-	int x, y;
+	int y;
 
-	for (x = r.min.x; x < r.max.x; x++) for (y = r.min.y; y < r.max.y; y++){
-		long loc = (x + y * m->width) * 4;
-		uint32 pixel = *((uint32*)(m->data->bdata + loc));
+	for (y = r.min.y; y < r.max.y; y++){
+		long loc = (y * m->width) * 4;
+		void *ptr = m->data->bdata + loc;
 
-		*((uint32*)(_fb.fbp + loc)) = pixel;
+		memcpy(_fb.fbp + loc, ptr, m->width * 4);
 	}
 }
 

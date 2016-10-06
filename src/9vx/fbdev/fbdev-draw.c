@@ -57,7 +57,6 @@ void
 memfillcolor(Memimage *m, uint32 val)
 {
 	_memfillcolor(m, val);
-
 }
 
 int
