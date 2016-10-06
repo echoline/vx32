@@ -111,6 +111,8 @@ flushmemscreen(Rectangle r)
 	long fbloc;
 	int x2, y2;
 
+	rectclip(&r, _fb.screenimage->r);
+
 	memimagedraw(_fb.screenimage, r, _fb.backbuf, r.min, nil, r.min, S);
 
 	if (_fb.cursor != nil) {

@@ -118,8 +118,6 @@ __mouse(struct input_event *event)
 	combinerect(&new, old);
 	new.min = subpt(new.min, Pt(16, 16)); // to encompass any _fb.cursor->offset
 
-	rectclip(&new, _fb.screenimage->r);
-
 	mousetrack(_fb.mouse.xy.x, _fb.mouse.xy.y, _fb.mouse.buttons, _fb.mouse.msec);
 
 	flushmemscreen(new);
