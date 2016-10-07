@@ -26,9 +26,9 @@ struct FBprivate {
 
 extern FBprivate _fb;
 
-extern Memimage*	_fbattach(char*, char*);
-extern int		_mouseattach(int);
-extern int		__mouse(struct input_event*);
+extern Memimage*	fbattach(int);
+extern int		mouseattach(int);
+extern int		mouseevent(struct input_event*);
 extern void		ctrlc(int sig);
 extern void		fbputc(int c);
 extern void		termctl(uint32 o, int);

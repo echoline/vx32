@@ -17,7 +17,7 @@
 #include <linux/keyboard.h>
 
 int
-__mouse(struct input_event *event)
+mouseevent(struct input_event *event)
 {
 	struct timeval tv;
 	Rectangle old, new;

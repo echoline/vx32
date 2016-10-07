@@ -31,14 +31,16 @@ _fbput(Memimage *m, Rectangle r) {
 }
 
 Memimage*
-_fbattach(char *label, char *winsize)
+fbattach(int fbdevidx)
 {
 	Rectangle r;
+	char devname[64];
 
 	/*
 	 * Connect to /dev/fb0
 	 */
-	if ((_fb.fd = open("/dev/fb0", O_RDWR)) < 0)
+	snprintf(devname, sizeof(devname) - 1, "/dev/fb%d", fbdevidx);
+	if ((_fb.fd = open(devname, O_RDWR)) < 0)
 		goto err;
 
 	if (ioctl(_fb.fd, FBIOGET_VSCREENINFO, &(_fb.vinfo)) < 0)
@@ -69,7 +71,7 @@ err:
 }
 
 int
-_mouseattach(int id)
+mouseattach(int id)
 {
 	char line[PATH_MAX+1024];
 	char mousefile[PATH_MAX] = "";

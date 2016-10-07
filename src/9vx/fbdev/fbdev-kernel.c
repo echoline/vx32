@@ -26,7 +26,7 @@ screeninit(void)
 }
 
 static void
-_fbproc(void *v)
+fbproc(void *v)
 {
 	struct input_event data;
 	unsigned char c;
@@ -49,7 +49,7 @@ _fbproc(void *v)
 			if (read(_fb.mousefd, &data, sizeof(data)) != sizeof(data))
 				panic("mousefd read: %r");
 
-			__mouse(&data);
+			mouseevent(&data);
 		}
 		if (pfd[1].revents & POLLIN) {
 			if (read(0, &c, 1) != 1)
@@ -75,13 +75,13 @@ attachscreen(Rectangle *r, ulong *chan, int *depth,
 
 	if(_fb.backbuf == nil){
 		_memimageinit();
-		if(_fbattach("9vx", nil) == nil)
+		if(fbattach(0) == nil)
 			panic("cannot open framebuffer: %r");
 
-		if (_mouseattach(-1) < 0)
+		if(mouseattach(-1) < 0)
 			panic("cannot open mouse: %r");
 
-		kproc("*fbdev*", _fbproc, nil);
+		kproc("*fbdev*", fbproc, nil);
 	}
 	m = _fb.backbuf;
 	*r = m->r;
